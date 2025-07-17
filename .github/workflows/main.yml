@@ -23,12 +23,15 @@ jobs:
           path: generated
 
       - name: Download Latest Release
+        working-directory: templates
         run: gh release download --pattern github-stats-rs-arm
         env:
           GH_TOKEN: ${{ github.token }}
 
       - name: Make Latest Release executable
-        run: chmod +x ./github-stats-rs-arm
+        run: |
+          mv templates/github-stats-rs-arm github-stats-rs-arm
+          chmod +x ./github-stats-rs-arm
 
       - name: Generate images
         run: ./github-stats-rs-arm
@@ -50,4 +53,4 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          git push origin main
+          git push origin generated
