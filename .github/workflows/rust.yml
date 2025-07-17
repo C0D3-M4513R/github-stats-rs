@@ -1,0 +1,65 @@
+name: Rust builds
+
+on:
+  push:
+    branches: [main]
+    tags:
+      - v*
+  pull_request:
+    branches: [main]
+permissions:
+  contents: write
+
+jobs:
+  create-release:
+    needs:
+     - build
+    runs-on: ubuntu-latest
+    if: github.ref_type == 'tag'
+    steps:
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+      - name: Rename and move artifacts
+        run: |
+          for dir in artifacts/*/
+          do
+            dir=${dir%*/} # remove the trailing "/"
+            for file in $dir/*
+            do 
+              file=${file##*/} # remove the path before the filename
+              base=${file%.*} # remove the extension
+              ext=${file#"$base"} # remove the filename before the extension
+              echo "moving ${dir}/${file} to artifacts/${file%%.*}-${dir##*/}${ext}"
+              mv "${dir}/${file}" "artifacts/${file%%.*}-${dir##*/}${ext}"
+            done
+            rm -r "${dir}"
+          done
+      - name: release
+        uses: ncipollo/release-action@v1
+        id: create_release
+        with:
+          generateReleaseNotes: true
+          artifacts: "artifacts/*"
+  build:
+    runs-on: ubuntu-latest-arm
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Build
+        run: cargo build --release
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: arm
+          path: |
+            target/${{ matrix.target }}/release/
+            !target/${{ matrix.target }}/release/deps
+            !target/${{ matrix.target }}/release/build
+            !target/${{ matrix.target }}/release/.fingerprint
+            !target/${{ matrix.target }}/release/examples
+            !target/${{ matrix.target }}/release/incremental
+            !target/${{ matrix.target }}/release/.cargo-lock
+            !target/${{ matrix.target }}/release/*.d
+            !target/${{ matrix.target }}/release/*.pdb
