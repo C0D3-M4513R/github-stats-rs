@@ -4,12 +4,26 @@ pub use telemetry::*;
 
 use confique::Config;
 use dotenvy::dotenv;
-use secrecy::SecretString;
+use secrecy::{ExposeSecret, SecretString};
+use serde::{Deserialize, Serialize};
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub enum AppKeyFormat{
+    RsaPem
+}
 
 #[derive(Debug, Config, Clone)]
 pub struct Configuration {
-    #[config(env = "ACCESS_TOKEN")]
-    access_token: SecretString,
+    #[config(env = "APP_ID")]
+    app_id: u64,
+    #[config(env = "APP_KEY")]
+    app_key: SecretString,
+    #[config(env = "APP_KEY_FORMAT")]
+    app_key_format: AppKeyFormat,
+    #[config(env = "INSTALLATION_ID")]
+    installation_id: u64,
+    // #[config(env = "ACCESS_TOKEN")]
+    // access_token: SecretString,
     #[config(env = "GITHUB_ACTOR")]
     github_actor: String,
     #[config(env = "EXCLUDED", default = "")]
@@ -29,9 +43,22 @@ pub struct Configuration {
 }
 
 impl Configuration {
-    pub fn access_token(&self) -> &SecretString {
-        &self.access_token
+    pub fn app_id(&self) -> u64 {
+        self.app_id
     }
+    pub fn app_key(&self) -> Result<jsonwebtoken::EncodingKey, jsonwebtoken::errors::Error> {
+        let key = self.app_key.expose_secret().as_bytes();
+        match self.app_key_format { 
+            AppKeyFormat::RsaPem => jsonwebtoken::EncodingKey::from_rsa_pem(key)
+        }
+    }
+    pub fn installation_id(&self) -> u64 {
+        self.installation_id
+    }
+
+    // pub fn access_token(&self) -> &SecretString {
+    //     &self.access_token
+    // }
 
     pub fn github_actor(&self) -> &str {
         &self.github_actor

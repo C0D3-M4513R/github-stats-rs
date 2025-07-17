@@ -23,13 +23,15 @@ use super::Configuration;
 #[derive(Debug)]
 pub struct Github {
     configuration: Configuration,
+    app: octocrab::Octocrab,
     client: Client,
 }
 
 impl Github {
-    pub fn new(configuration: Configuration, client: Client) -> Self {
+    pub fn new(configuration: Configuration, app: octocrab::Octocrab, client: Client) -> Self {
         Self {
             configuration,
+            app,
             client,
         }
     }
@@ -143,7 +145,8 @@ impl GithubExt for Github {
             name = name.or(raw_results
                 .data
                 .as_ref()
-                .and_then(|data| data.viewer.name.clone()));
+                .and_then(|data| data.viewer.name.clone())
+            );
 
             let mut languages_contributed = languages_map;
 
