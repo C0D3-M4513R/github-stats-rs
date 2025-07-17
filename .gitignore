@@ -1,0 +1,4 @@
+/target
+
+# Env file
+*.env*
