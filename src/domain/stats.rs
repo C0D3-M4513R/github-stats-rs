@@ -15,7 +15,7 @@ pub struct Stats {
     languages: Vec<(String, Language)>,
     repos: Vec<String>,
     lines_changed: (i64, i64),
-    views: i64,
+    views: String,
     contribution_calendar: Vec<CalendarWeek>,
 }
 
@@ -48,8 +48,8 @@ impl Stats {
         self.lines_changed
     }
 
-    pub fn views(&self) -> i64 {
-        self.views
+    pub fn views(&self) -> &str {
+        self.views.as_str()
     }
 
     pub fn contribution_calendar(&self) -> &[CalendarWeek] {

@@ -317,24 +317,44 @@ impl GithubExt for Github {
     }
 
     #[tracing::instrument]
-    async fn views(&self, repos: &[String]) -> Result<i64> {
-        let mut views = 0;
-
+    async fn views(&self, repos: &[String]) -> Result<String> {
+        let mut tasks = JoinSet::new();
         for repo in repos {
-            let response = self
-                .client
-                .get(format!(
-                    "{}/repos/{}/traffic/views",
-                    &self.configuration.github_url(),
-                    repo
-                ))
-                .send()
-                .await?;
-            let json = response.json::<ViewTraffic>().await?;
-            let sum: i64 = json.views().iter().map(|view| view.count()).sum();
-            views += sum;
+            let url = format!(
+                "{}/repos/{}/traffic/views",
+                &self.configuration.github_url(),
+                repo
+            );
+            let client = self.client.clone();
+            tasks.spawn(async move {
+                let response = client
+                    .get(url)
+                    .send()
+                    .await?;
+                let json = response.json::<ViewTraffic>().await?;
+                let sum: i64 = json.views().iter().map(|view| view.count()).sum();
+                Ok::<_, anyhow::Error>(sum)
+            });
         }
-        Ok(views)
+
+        let mut views = 0;
+        let mut has_error = false;
+        while let Some(task) = tasks.join_next().await {
+            match task? {
+                Ok(v) => {
+                    views += v;
+                },
+                Err(_) => {
+                    has_error = true;
+                }
+            }
+        }
+
+        Ok(if has_error {
+            format!("at least {views}")
+        }else {
+            format!("{views}")
+        })
     }
 
     #[tracing::instrument]
