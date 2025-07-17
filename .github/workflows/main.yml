@@ -15,6 +15,12 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: templates
+          path: templates
+
+      - uses: actions/checkout@v4
+        with:
+          ref: generated
+          path: generated
 
       - name: Download Latest Release
         run: gh release download --pattern github-stats-rs-arm
@@ -27,19 +33,20 @@ jobs:
       - name: Generate images
         run: ./github-stats-rs-arm
         env:
-          TEMPLATE_FOLDER: "."
-          OUTPUT_FOLDER: "."
+          TEMPLATE_FOLDER: "templates"
+          OUTPUT_FOLDER: "generated"
           ACCESS_TOKEN: ${{ secrets.ACCESS_TOKEN }}
 
       - name: Commit to the repo
+        working-directory: generated
         run: |
-          git checkout generated
           git add .
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git commit -m 'Update generated files' || true
 
       - name: Push changes
+        working-directory: generated
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
