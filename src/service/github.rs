@@ -348,8 +348,11 @@ impl GithubExt for Github {
                 &self.configuration.github_url(),
                 repo
             );
-            let result = client.get(&url).send().await?;
-            let task = result.json::<Vec<ContributorActivity>>();
+            let task = async move {
+                let result = client.get(&url).send().await?;
+                let output = result.json::<Vec<ContributorActivity>>().await?;
+                Ok::<_, anyhow::Error>(output)
+            };
             tasks.spawn(task);
         }
         let responses = tasks.join_all().await;
