@@ -4,19 +4,19 @@
 ---
 
 GitHub Stats RS is a Rust application that generates GitHub statistics and visualizes them using SVG images.
-<a href="https://github.com/callmestech/github-stats-rs">
-<img src="https://github.com/callmestech/github-stats-rs/blob/master/resources/generated/overview.svg#gh-dark-mode-only" />
-<img src="https://github.com/callmestech/github-stats-rs/blob/master/resources/generated/languages.svg#gh-dark-mode-only" />
-<img src="https://github.com/callmestech/github-stats-rs/blob/master/resources/generated/overview.svg#gh-light-mode-only" />
-<img src="https://github.com/callmestech/github-stats-rs/blob/master/resources/generated/languages.svg#gh-light-mode-only" />
+<a href="https://github.com/C0D3-M4513R/github-stats-rs">
+<img src="https://github.com/C0D3-M4513R/github-stats-rs/blob/generated/overview.svg#gh-dark-mode-only" />
+<img src="https://github.com/C0D3-M4513R/github-stats-rs/blob/generated/languages.svg#gh-dark-mode-only" />
+<img src="https://github.com/C0D3-M4513R/github-stats-rs/blob/generated/overview.svg#gh-light-mode-only" />
+<img src="https://github.com/C0D3-M4513R/github-stats-rs/blob/generated/languages.svg#gh-light-mode-only" />
 </a>
 
 ##### WIP: Animated contribution heatmap
 
 ---
-<a href="https://github.com/callmestech/github-stats-rs">
-<img src="https://github.com/callmestech/github-stats-rs/blob/master/resources/generated/contribution_grid.svg#gh-dark-mode-only" />
-<img src="https://github.com/callmestech/github-stats-rs/blob/master/resources/generated/contribution_grid.svg#gh-light-mode-only" />
+<a href="https://github.com/C0D3-M4513R/github-stats-rs">
+<img src="https://github.com/C0D3-M4513R/github-stats-rs/blob/generated/contribution_grid.svg#gh-dark-mode-only" />
+<img src="https://github.com/C0D3-M4513R/github-stats-rs/blob/generated/contribution_grid.svg#gh-light-mode-only" />
 </a>
 
 ## Features
