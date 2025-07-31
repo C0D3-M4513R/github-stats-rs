@@ -39,7 +39,7 @@ jobs:
           TEMPLATE_FOLDER: "templates"
           OUTPUT_FOLDER: "generated"
           ACCESS_TOKEN: ${{ secrets.ACCESS_TOKEN }}
-          EXCLUDED: "TLOF-Club-Unity"
+          EXCLUDED: "https://github.com/C0D3-M4513R/TLOF-Club-Unity"
 
       - name: Commit to the repo
         working-directory: generated
