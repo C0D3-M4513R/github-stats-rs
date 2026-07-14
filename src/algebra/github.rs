@@ -1,5 +1,6 @@
 #![allow(async_fn_in_trait)]
 
+use std::sync::Arc;
 use crate::domain::Stats;
 
 use anyhow::Result;
@@ -9,7 +10,7 @@ pub trait GithubExt {
 
     async fn total_contributions(&self) -> Result<i64>;
     async fn get_stats(&self) -> Result<Stats>;
-    async fn views(&self, repos: &[String]) -> Result<String>;
-    async fn lines_changed(&self, repos: &[String]) -> Result<(i64, i64)>;
+    async fn views(&self, repos: Arc<[String]>) -> Result<String>;
+    async fn lines_changed(&self, repos: Arc<[String]>) -> Result<(i64, i64)>;
     async fn contribution_calendar(&self) -> Result<Vec<Self::CalendarWeek>>;
 }

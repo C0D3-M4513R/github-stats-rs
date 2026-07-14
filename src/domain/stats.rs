@@ -1,3 +1,4 @@
+use std::sync::Arc;
 use derive_builder::Builder;
 
 use super::contribution_calendar::ContributionCalendarUserContributionsCollectionContributionCalendarWeeks;
@@ -13,7 +14,7 @@ pub struct Stats {
     /// A Vec of languages with their name as key and the Language struct as value
     /// Sorted by the size of the language
     languages: Vec<(String, Language)>,
-    repos: Vec<String>,
+    repos: Arc<[String]>,
     lines_changed: (i64, i64),
     views: String,
     contribution_calendar: Vec<CalendarWeek>,
@@ -40,7 +41,7 @@ impl Stats {
         &self.languages
     }
 
-    pub fn repos(&self) -> &Vec<String> {
+    pub fn repos(&self) -> &[String] {
         self.repos.as_ref()
     }
 

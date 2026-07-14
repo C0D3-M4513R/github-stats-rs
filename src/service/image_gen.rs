@@ -9,22 +9,61 @@ pub struct ImageGen {
     output_folder: String,
 }
 
+macro_rules! format_number {
+    ($number:ident) => {
+        {
+            let grouping = 1_000;
+            let mut $number = $number;
+
+            let mut out = Vec::<u16>::with_capacity($number.ilog10() as usize + 1 );
+
+            while ($number > grouping) {
+                let rem = $number.rem_euclid(grouping);
+                out.push(rem as u16);
+                $number = $number.div_euclid(grouping);
+            }
+            let rem = $number.to_string();
+            let mut out_str = String::with_capacity((out.len() + 1)*4);
+            out_str.push_str(rem.as_str());
+
+            for i in out.into_iter().rev() {
+                let i = i.to_string();
+                out_str.push('.');
+                out_str.push_str(i.as_str());
+            }
+
+            out_str
+        }
+    };
+}
+pub(crate) use format_number;
+
 impl ImageGenExt for ImageGen {
     fn generate_overview(&self, stats: &Stats) -> Result<(), anyhow::Error> {
         let svg_content = fs::read_to_string(format!("{}/overview.svg", self.template_folder))?;
         let mut tags_map = HashMap::new();
 
         tags_map.insert("name".to_string(), stats.name().to_string());
-        tags_map.insert("stars".to_string(), stats.stargazers().to_string());
-        tags_map.insert("forks".to_string(), stats.forks().to_string());
-        tags_map.insert(
-            "contributions".to_string(),
-            stats.total_contributions().to_string(),
-        );
+        let stars = stats.stargazers();
+        let stars = format_number!(stars);
+        tags_map.insert("stars".to_string(), stars);
+        let forks = stats.forks();
+        let forks = format_number!(forks);
+        tags_map.insert("forks".to_string(), forks);
+
+        let contributions = stats.total_contributions();
+        let contributions = format_number!(contributions);
+        tags_map.insert("contributions".to_string(), contributions);
+
         let (added, removed) = stats.lines_changed();
-        tags_map.insert("lines_changed".to_string(), format!("{}", added + removed));
+        let changed = added+removed;
+        let changed = format_number!(changed);
+        tags_map.insert("lines_changed".to_string(), changed);
         tags_map.insert("views".to_string(), stats.views().to_string());
-        tags_map.insert("repos".to_string(), stats.repos().iter().len().to_string());
+
+        let repos = stats.repos().iter().len();
+        let repos = format_number!(repos);
+        tags_map.insert("repos".to_string(), repos);
 
         fs::create_dir_all(&self.output_folder)?;
         let modified_content = Self::replace_tags(svg_content, &tags_map)?;

@@ -12,6 +12,8 @@ pub struct Configuration {
     access_token: SecretString,
     #[config(env = "GITHUB_ACTOR")]
     github_actor: String,
+    #[config(env = "EXCLUDED_CONTRIBUTED", default = "")]
+    excluded_constributed_repos: String,
     #[config(env = "EXCLUDED", default = "")]
     excluded_repos: String,
     #[config(env = "EXCLUDED_LANGS", default = "")]
@@ -37,8 +39,11 @@ impl Configuration {
         &self.github_actor
     }
 
-    pub fn excluded_repos(&self) -> Vec<&str> {
-        self.excluded_repos.split(',').collect()
+    pub fn excluded_constributed_repos(&self) -> impl Iterator<Item = &str> {
+        self.excluded_constributed_repos.split(',')
+    }
+    pub fn excluded_repos(&self) -> impl Iterator<Item = &str> {
+        self.excluded_repos.split(',')
     }
 
     pub fn excluded_langs(&self) -> Vec<&str> {

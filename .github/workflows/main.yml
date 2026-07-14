@@ -39,7 +39,9 @@ jobs:
           TEMPLATE_FOLDER: "templates"
           OUTPUT_FOLDER: "generated"
           ACCESS_TOKEN: ${{ secrets.ACCESS_TOKEN }}
-          EXCLUDED: "C0D3-M4513R/TLOF-Club-Unity"
+          EXCLUDED: "C0D3-M4513R/vrc-runa,C0D3-M4513R/vrc-Jannik-Mayo,C0D3-M4513R/vrc-CYBERSHKURA,C0D3-M4513R/vrc-WaterInTheDark,C0D3-M4513R/vrc-miniruna,C0D3-M4513R/VRC-Runyant,C0D3-M4513R/VRC-Cyant"
+          EXCLUDED_CONTRIBUTED: "NickImpact/Impactor,NickImpact/ImpactorAPI,NickImpact/COMMANDS,vrchatapi/vrchatapi-java,vrchatapi/vrchatapi-python,vrchatapi/vrchatapi-csharp,Divine-Journey-2/Divine-Journey-2,vrchatapi/specification"
+
 
       - name: Commit to the repo
         working-directory: generated

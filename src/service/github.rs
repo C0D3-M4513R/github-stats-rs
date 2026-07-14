@@ -1,5 +1,5 @@
 use std::collections::HashMap;
-
+use std::sync::Arc;
 use anyhow::Result;
 use chrono::{DateTime, NaiveDate, TimeZone, Utc};
 use graphql_client::reqwest::post_graphql;
@@ -20,16 +20,16 @@ use crate::{
 
 use super::Configuration;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Github {
-    configuration: Configuration,
+    configuration: Arc<Configuration>,
     client: Client,
 }
 
 impl Github {
     pub fn new(configuration: Configuration, client: Client) -> Self {
         Self {
-            configuration,
+            configuration: Arc::new(configuration),
             client,
         }
     }
@@ -122,6 +122,21 @@ impl GithubExt for Github {
 
     #[tracing::instrument]
     async fn get_stats(&self) -> Result<Stats> {
+        macro_rules! call {
+            ($slf:ident, $($capture:ident),* ; $fn:expr) => {
+                {
+                    let $slf = self.clone();
+                    $(let $capture = $capture.clone();)*
+                    tokio::task::spawn(async move{
+                        $fn.await
+                    })
+                }
+            };
+        }
+        
+        let total_contributions = call!(slf,; slf.total_contributions());
+        let calendar = call!(slf,; slf.contribution_calendar());
+
         let mut next_owned = None;
         let mut next_contrib = None;
 
@@ -151,9 +166,10 @@ impl GithubExt for Github {
                 // in this case we only fetch owned repos
             } else {
                 // in this case we fetch both owned and contributed repos
-                let contributed_repos = raw_results
+                let res = raw_results
                     .data
-                    .as_ref()
+                    .as_ref();
+                let contributed_repos = res
                     .and_then(|data| data.viewer.repositories_contributed_to.nodes.as_ref())
                     .map(|nodes| {
                         nodes
@@ -172,7 +188,12 @@ impl GithubExt for Github {
                 languages_contributed = contributed_repos
                     .iter()
                     .flatten()
-                    .filter_map(|repo| repo.languages.as_ref())
+                    .filter_map(|repo| {
+                        if self.configuration.excluded_constributed_repos().any(|s| s.eq_ignore_ascii_case(repo.name_with_owner.as_str())) {
+                            return None;
+                        }
+                        repo.languages.as_ref()
+                    })
                     .filter_map(|languages| languages.edges.as_ref())
                     .flatten()
                     .flatten()
@@ -221,7 +242,12 @@ impl GithubExt for Github {
                 .flat_map(|repos| &repos.nodes)
                 .flatten()
                 .flatten()
-                .filter_map(|nodes| nodes.languages.as_ref())
+                .filter_map(|repo| {
+                    if self.configuration.excluded_repos().any(|s| s.eq_ignore_ascii_case(repo.name_with_owner.as_str())) {
+                        return None;
+                    }
+                    repo.languages.as_ref()
+                })
                 .filter_map(|languages| languages.edges.as_ref())
                 .flatten()
                 .flatten()
@@ -270,21 +296,21 @@ impl GithubExt for Github {
                     })
                     .unwrap_or_default();
 
-            if has_next_owned || has_next_contrib {
-                next_owned = owned_repos
-                    .as_ref()
-                    .and_then(|repos| repos.page_info.end_cursor.as_ref().cloned());
-                next_contrib = raw_results.data.as_ref().and_then(|data| {
-                    data.viewer
-                        .repositories_contributed_to
-                        .page_info
-                        .end_cursor
-                        .as_ref()
-                        .cloned()
-                });
-            } else {
+            if !has_next_owned && !has_next_contrib {
                 break;
             }
+
+            next_owned = owned_repos
+                .as_ref()
+                .and_then(|repos| repos.page_info.end_cursor.as_ref().cloned());
+            next_contrib = raw_results.data.as_ref().and_then(|data| {
+                data.viewer
+                    .repositories_contributed_to
+                    .page_info
+                    .end_cursor
+                    .as_ref()
+                    .cloned()
+            });
         }
         // sort languages by size and take top N languages as defined in configuration
         let mut languages = languages_map.into_iter().collect::<Vec<_>>();
@@ -293,33 +319,36 @@ impl GithubExt for Github {
             .into_iter()
             .take(self.configuration.languages_limit())
             .collect();
-        let total_contributions = self.total_contributions();
-        let views = self.views(&repos);
-        let lines_changed = self.lines_changed(&repos);
-        let calendar = self.contribution_calendar();
+        let repos = Arc::<[String]>::from(repos);
+        let views = call!(slf,repos; slf.views(repos));
+        let lines_changed = call!(slf,repos; slf.lines_changed(repos));
 
         let (total_contributions, views, lines_changed, calendar) =
             tokio::join!(total_contributions, views, lines_changed, calendar);
+        let total_contributions = total_contributions??;
+        let calendar = calendar??;
+        let views = views??;
+        let lines_changed = lines_changed??;
 
         let stats = StatsBuilder::default()
             .name(name.unwrap_or_default())
-            .total_contributions(total_contributions?)
-            .views(views?)
-            .lines_changed(lines_changed?)
+            .total_contributions(total_contributions)
+            .views(views)
+            .lines_changed(lines_changed)
             .repos(repos)
             .forks(forks)
             .stargazers(stargazers)
             .languages(languages)
-            .contribution_calendar(calendar?)
+            .contribution_calendar(calendar)
             .build()?;
 
         Ok(stats)
     }
 
     #[tracing::instrument]
-    async fn views(&self, repos: &[String]) -> Result<String> {
+    async fn views(&self, repos: Arc<[String]>) -> Result<String> {
         let mut tasks = JoinSet::new();
-        for repo in repos {
+        for repo in &*repos {
             let url = format!(
                 "{}/repos/{}/traffic/views",
                 &self.configuration.github_url(),
@@ -349,6 +378,7 @@ impl GithubExt for Github {
                 }
             }
         }
+        let views = crate::service::format_number!(views);
 
         Ok(if has_error {
             format!("at least {views}")
@@ -358,9 +388,9 @@ impl GithubExt for Github {
     }
 
     #[tracing::instrument]
-    async fn lines_changed(&self, repos: &[String]) -> Result<(i64, i64)> {
+    async fn lines_changed(&self, repos: Arc<[String]>) -> Result<(i64, i64)> {
         let mut tasks = JoinSet::new();
-        for repo in repos {
+        for repo in &*repos {
             // uses Arc under the hood so it's fine to clone
             let client = self.client.clone();
             let url = format!(
